@@ -394,6 +394,107 @@
     font-size: 18px;
 }
 
+.sercan-modules-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 18px;
+}
+
+.sercan-module-card {
+    background: #fff;
+    border: 1px solid #e2e8f0;
+    border-radius: 20px;
+    padding: 22px;
+    box-shadow: 0 10px 30px rgba(15, 23, 42, 0.05);
+}
+
+.sercan-module-head {
+    display: flex;
+    gap: 16px;
+    align-items: flex-start;
+}
+
+.sercan-module-content {
+    flex: 1;
+}
+
+.sercan-module-topline {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    margin-bottom: 10px;
+}
+
+.sercan-module-topline h2 {
+    margin: 0;
+    font-size: 20px;
+}
+
+.sercan-module-content p {
+    margin: 0;
+    color: #64748b;
+    line-height: 1.7;
+}
+
+.sercan-switch {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    cursor: pointer;
+    user-select: none;
+}
+
+.sercan-switch input[type="checkbox"] {
+    position: absolute;
+    opacity: 0;
+    pointer-events: none;
+}
+
+.sercan-switch-slider {
+    position: relative;
+    width: 52px;
+    height: 30px;
+    background: #cbd5e1;
+    border-radius: 999px;
+    transition: background 0.25s ease;
+    flex-shrink: 0;
+}
+
+.sercan-switch-slider::before {
+    content: "";
+    position: absolute;
+    top: 4px;
+    left: 4px;
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    background: #fff;
+    box-shadow: 0 4px 10px rgba(15, 23, 42, 0.15);
+    transition: transform 0.25s ease;
+}
+
+.sercan-switch input[type="checkbox"]:checked + .sercan-switch-slider {
+    background: #2271b1;
+}
+
+.sercan-switch input[type="checkbox"]:checked + .sercan-switch-slider::before {
+    transform: translateX(22px);
+}
+
+.sercan-switch input[type="checkbox"]:focus + .sercan-switch-slider {
+    box-shadow: 0 0 0 3px rgba(34, 113, 177, 0.18);
+}
+
+.sercan-switch-text {
+    font-weight: 600;
+    color: #0f172a;
+}
+
+.sercan-actions-spaced {
+    margin-top: 20px;
+}
+
 .sercan-field {
     margin-bottom: 18px;
 }
@@ -629,7 +730,8 @@
     .sercan-tools-grid,
     .sercan-info-grid,
     .sercan-home-two-col,
-    .sercan-home-mini-grid {
+    .sercan-home-mini-grid,
+    .sercan-modules-grid {
         grid-template-columns: 1fr;
     }
 }
@@ -637,7 +739,8 @@
 @media (max-width: 782px) {
     .sercan-header,
     .sercan-part-head,
-    .sercan-list-item {
+    .sercan-list-item,
+    .sercan-module-topline {
         flex-direction: column;
         align-items: flex-start;
         grid-template-columns: 1fr;

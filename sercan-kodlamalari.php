@@ -18,6 +18,7 @@ define('SERCAN_KODLAMALARI_URL', plugin_dir_url(__FILE__));
 
 require_once SERCAN_KODLAMALARI_PATH . 'includes/class-sercan-kodlamalari-admin.php';
 require_once SERCAN_KODLAMALARI_PATH . 'includes/class-sercan-draft-product-cleaner.php';
+require_once SERCAN_KODLAMALARI_PATH . 'includes/class-sercan-product-image-auto-delete.php';
 require_once SERCAN_KODLAMALARI_PATH . 'includes/class-sercan-url-source-splitter.php';
 
 add_action('plugins_loaded', function () {
@@ -25,6 +26,10 @@ add_action('plugins_loaded', function () {
 
     if (class_exists('WooCommerce')) {
         new Sercan_Draft_Product_Cleaner();
+
+        if (Sercan_Kodlamalari_Admin::is_module_enabled('product_image_auto_delete')) {
+            new Sercan_Product_Image_Auto_Delete();
+        }
     }
 
     new Sercan_URL_Source_Splitter();

@@ -6,12 +6,14 @@ if (!defined('ABSPATH')) {
 class Sercan_Kodlamalari_Admin
 {
     const OPTION_RECENT_TOOLS = 'sercan_kodlamalari_recent_tools';
+    const OPTION_MODULES = 'sercan_kodlamalari_modules_v1';
 
     public function __construct()
     {
         add_action('admin_menu', [$this, 'register_admin_menu'], 9);
         add_action('admin_enqueue_scripts', [$this, 'enqueue_assets'], 99);
         add_action('admin_init', [$this, 'track_recent_tool']);
+        add_action('admin_init', [$this, 'handle_modules_save']);
     }
 
     public function register_admin_menu()
@@ -29,6 +31,15 @@ class Sercan_Kodlamalari_Admin
             'dashicons-admin-generic',
             2
         );
+
+        add_submenu_page(
+            'sercan-kodlamalari',
+            'Modüller',
+            'Modüller',
+            'manage_options',
+            'sercan-kodlamalari-moduller',
+            [$this, 'render_modules_page']
+        );
     }
 
     public function enqueue_assets($hook)
@@ -41,6 +52,7 @@ class Sercan_Kodlamalari_Admin
 
         $allowed_pages = [
             'sercan-kodlamalari',
+            'sercan-kodlamalari-moduller',
             'sercan-draft-product-cleaner',
             'sercan-url-source-splitter',
         ];
@@ -125,6 +137,84 @@ class Sercan_Kodlamalari_Admin
         ];
     }
 
+    public static function get_registered_modules()
+    {
+        return [
+            'product_image_auto_delete' => [
+                'title' => 'Ürün Görsellerini Otomatik Sil',
+                'description' => 'Ürün veya ürün galerisi silindiğinde ilişkili medya dosyalarını da sunucudan kaldırır.',
+                'icon' => '🖼️',
+            ],
+        ];
+    }
+
+    public static function get_modules_state()
+    {
+        $state = get_option(self::OPTION_MODULES, []);
+
+        if (!is_array($state)) {
+            $state = [];
+        }
+
+        $defaults = [];
+
+        foreach (self::get_registered_modules() as $module_key => $module) {
+            $defaults[$module_key] = 'no';
+        }
+
+        return wp_parse_args($state, $defaults);
+    }
+
+    public static function is_module_enabled($module_key)
+    {
+        $module_key = sanitize_key($module_key);
+        $state = self::get_modules_state();
+
+        return isset($state[$module_key]) && $state[$module_key] === 'yes';
+    }
+
+    public function handle_modules_save()
+    {
+        if (!is_admin() || !current_user_can('manage_options')) {
+            return;
+        }
+
+        $page = isset($_GET['page']) ? sanitize_text_field(wp_unslash($_GET['page'])) : '';
+        if ($page !== 'sercan-kodlamalari-moduller') {
+            return;
+        }
+
+        if (!isset($_POST['sercan_modules_save'])) {
+            return;
+        }
+
+        check_admin_referer('sercan_modules_save_action', 'sercan_modules_nonce');
+
+        $submitted_modules = isset($_POST['sercan_modules']) && is_array($_POST['sercan_modules'])
+            ? wp_unslash($_POST['sercan_modules'])
+            : [];
+
+        $state = [];
+
+        foreach (self::get_registered_modules() as $module_key => $module) {
+            $raw_value = isset($submitted_modules[$module_key]) ? sanitize_text_field($submitted_modules[$module_key]) : '0';
+            $state[$module_key] = $raw_value === '1' ? 'yes' : 'no';
+        }
+
+        update_option(self::OPTION_MODULES, $state, false);
+
+        $redirect_url = add_query_arg(
+            [
+                'page' => 'sercan-kodlamalari-moduller',
+                'settings-updated' => 'true',
+            ],
+            admin_url('admin.php')
+        );
+
+        wp_safe_redirect($redirect_url);
+        exit;
+    }
+
     private function get_quick_stats($tools)
     {
         return [
@@ -189,6 +279,9 @@ class Sercan_Kodlamalari_Admin
                     <div class="sercan-home-actions">
                         <a class="button button-primary" href="<?php echo esc_url(admin_url('admin.php?page=sercan-draft-product-cleaner')); ?>">
                             Taslak Temizleyiciyi Aç
+                        </a>
+                        <a class="button" href="<?php echo esc_url(admin_url('admin.php?page=sercan-kodlamalari-moduller')); ?>">
+                            Modülleri Yönet
                         </a>
                         <a class="button" href="<?php echo esc_url(admin_url('admin.php?page=sercan-url-source-splitter')); ?>">
                             Kaynak Kod Bölücüyü Aç
@@ -330,6 +423,69 @@ class Sercan_Kodlamalari_Admin
                     </div>
                 </div>
             </div>
+        </div>
+        <?php
+    }
+
+    public function render_modules_page()
+    {
+        if (!current_user_can('manage_options')) {
+            wp_die('Bu alana erişim yetkiniz yok.');
+        }
+
+        $modules = self::get_registered_modules();
+        $state = self::get_modules_state();
+        ?>
+        <div class="wrap sercan-wrap">
+            <div class="sercan-header">
+                <div>
+                    <h1>Modüller</h1>
+                    <p>Sercan Kodlamaları içindeki modülleri buradan aktif veya pasif hale getirebilirsiniz.</p>
+                </div>
+                <div class="sercan-badge">Sercan Kodlamaları</div>
+            </div>
+
+            <?php if (isset($_GET['settings-updated']) && sanitize_text_field(wp_unslash($_GET['settings-updated'])) === 'true') : ?>
+                <div class="notice notice-success is-dismissible">
+                    <p>Modül ayarları güncellendi.</p>
+                </div>
+            <?php endif; ?>
+
+            <form method="post" action="<?php echo esc_url(admin_url('admin.php?page=sercan-kodlamalari-moduller')); ?>">
+                <?php wp_nonce_field('sercan_modules_save_action', 'sercan_modules_nonce'); ?>
+
+                <div class="sercan-modules-grid">
+                    <?php foreach ($modules as $module_key => $module) : ?>
+                        <div class="sercan-module-card">
+                            <div class="sercan-module-head">
+                                <div class="sercan-tool-icon"><?php echo esc_html($module['icon']); ?></div>
+                                <div class="sercan-module-content">
+                                    <div class="sercan-module-topline">
+                                        <h2><?php echo esc_html($module['title']); ?></h2>
+                                        <label class="sercan-switch" for="sercan-module-<?php echo esc_attr($module_key); ?>">
+                                            <input type="hidden" name="sercan_modules[<?php echo esc_attr($module_key); ?>]" value="0">
+                                            <input
+                                                type="checkbox"
+                                                id="sercan-module-<?php echo esc_attr($module_key); ?>"
+                                                name="sercan_modules[<?php echo esc_attr($module_key); ?>]"
+                                                value="1"
+                                                <?php checked(isset($state[$module_key]) && $state[$module_key] === 'yes'); ?>
+                                            >
+                                            <span class="sercan-switch-slider" aria-hidden="true"></span>
+                                            <span class="sercan-switch-text"><?php echo isset($state[$module_key]) && $state[$module_key] === 'yes' ? 'Aktif' : 'Pasif'; ?></span>
+                                        </label>
+                                    </div>
+                                    <p><?php echo esc_html($module['description']); ?></p>
+                                </div>
+                            </div>
+                        </div>
+                    <?php endforeach; ?>
+                </div>
+
+                <div class="sercan-actions sercan-actions-spaced">
+                    <button type="submit" name="sercan_modules_save" value="1" class="button button-primary">Ayarları Kaydet</button>
+                </div>
+            </form>
         </div>
         <?php
     }
