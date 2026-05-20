@@ -7,6 +7,7 @@ class Sercan_Kodlamalari_Admin
 {
     const OPTION_RECENT_TOOLS = 'sercan_kodlamalari_recent_tools';
     const OPTION_MODULES = 'sercan_kodlamalari_modules_v1';
+    const TRANSIENT_MODULES_NOTICE = 'sercan_kodlamalari_modules_notice';
 
     public function __construct()
     {
@@ -206,11 +207,11 @@ class Sercan_Kodlamalari_Admin
         $redirect_url = add_query_arg(
             [
                 'page' => 'sercan-kodlamalari-moduller',
-                'settings-updated' => 'true',
             ],
             admin_url('admin.php')
         );
 
+        set_transient(self::TRANSIENT_MODULES_NOTICE, 'updated', MINUTE_IN_SECONDS);
         wp_safe_redirect($redirect_url);
         exit;
     }
@@ -435,6 +436,11 @@ class Sercan_Kodlamalari_Admin
 
         $modules = self::get_registered_modules();
         $state = self::get_modules_state();
+        $show_notice = get_transient(self::TRANSIENT_MODULES_NOTICE) === 'updated';
+
+        if ($show_notice) {
+            delete_transient(self::TRANSIENT_MODULES_NOTICE);
+        }
         ?>
         <div class="wrap sercan-wrap">
             <div class="sercan-header">
@@ -445,7 +451,7 @@ class Sercan_Kodlamalari_Admin
                 <div class="sercan-badge">Sercan Kodlamaları</div>
             </div>
 
-            <?php if (isset($_GET['settings-updated']) && sanitize_text_field(wp_unslash($_GET['settings-updated'])) === 'true') : ?>
+            <?php if ($show_notice) : ?>
                 <div class="notice notice-success is-dismissible">
                     <p>Modül ayarları güncellendi.</p>
                 </div>
